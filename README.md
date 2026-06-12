@@ -23,6 +23,4 @@ Easy: maj, min, maj7, min7
 Medium: adds dom7, dom9, maj9, min9, sus2, sus4, dim7, min7b5  
 Hard: all of the above plus maj11, min11, dom11, maj13, min13, dom13, dom7sus4, dom9sus4, dim, aug, aug7, add9, minadd9, 6, min6, 6/9, maj7#11, dom7b9, dom7#9
 
-## License
 
-MIT

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chord Drill</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0e0e0e;
+    color: #e8e8e8;
+    min-height: 100vh;
+    padding: 1rem;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 18px; font-weight: 500; margin-bottom: 1.25rem; color: #aaa; letter-spacing: 0.5px; }
+
+  .mode-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .mode-btn {
+    font-size: 13px; padding: 6px 14px; cursor: pointer;
+    border-radius: 8px; border: 1px solid #333;
+    background: #1a1a1a; color: #888;
+  }
+  .mode-btn.active { border-color: #4a8fd4; color: #7ab8f5; background: #0f2035; }
+
+  .timer-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; }
+  .timer-row label { font-size: 13px; color: #666; white-space: nowrap; }
+  .timer-row input[type=range] { flex: 1; accent-color: #4a8fd4; }
+  .timer-row span { font-size: 13px; font-weight: 500; min-width: 30px; color: #ccc; }
+
+  .score-row { display: flex; gap: 10px; margin-bottom: 1.25rem; }
+  .metric {
+    background: #1a1a1a; border-radius: 8px; padding: 0.65rem 0.75rem;
+    flex: 1; text-align: center; border: 1px solid #222;
+  }
+  .metric-label { font-size: 11px; color: #555; margin-bottom: 3px; }
+  .metric-val { font-size: 20px; font-weight: 500; color: #ddd; }
+
+  .card {
+    background: #141414; border: 1px solid #222;
+    border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;
+  }
+
+  .timer-bar-wrap { height: 3px; background: #222; border-radius: 2px; margin-bottom: 1.25rem; overflow: hidden; }
+  .timer-bar { height: 3px; background: #4a8fd4; border-radius: 2px; transition: width 0.1s linear; }
+
+  .chord-name {
+    font-size: 44px; font-weight: 500; color: #fff;
+    text-align: center; margin: 0.25rem 0 0.5rem; letter-spacing: -1px;
+  }
+  .note-count { font-size: 12px; color: #555; text-align: center; margin-bottom: 1.25rem; }
+
+  .answer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 0.75rem; }
+  .note-btn {
+    padding: 11px 4px; font-size: 15px; cursor: pointer;
+    border-radius: 8px; border: 1px solid #2a2a2a;
+    background: #1c1c1c; color: #ccc; transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .note-btn:active { transform: scale(0.96); }
+  .note-btn.selected { background: #0f2035; border-color: #4a8fd4; color: #7ab8f5; }
+  .note-btn.correct { background: #0d2410; border-color: #4a9a2a; color: #88cc66; }
+  .note-btn.wrong { background: #2a0d0d; border-color: #a03030; color: #e07070; }
+  .note-btn:disabled { cursor: default; }
+
+  .feedback { text-align: center; font-size: 14px; min-height: 20px; color: #555; margin-bottom: 0.75rem; }
+  .feedback.ok { color: #6abf45; font-weight: 500; }
+  .feedback.ko { color: #cc5555; font-weight: 500; }
+
+  .hint { font-size: 12px; color: #444; text-align: center; margin-top: 0.5rem; font-family: monospace; }
+
+  .next-btn {
+    width: 100%; padding: 11px; font-size: 15px; cursor: pointer;
+    border-radius: 8px; border: 1px solid #2a2a2a;
+    background: #1a1a1a; color: #aaa; margin-top: 4px;
+  }
+  .next-btn:active { background: #222; }
+
+  /* Calendar */
+  .cal-section { margin-top: 0.5rem; }
+  .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .cal-title { font-size: 14px; color: #666; }
+  .cal-streak { font-size: 13px; color: #7ab8f5; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 4px; background: #1a1a1a;
+    border: 1px solid #222; display: flex; align-items: center;
+    justify-content: center; font-size: 10px; color: #444;
+  }
+  .cal-day.practiced { background: #0f2035; border-color: #4a8fd4; color: #7ab8f5; }
+  .cal-day.today { border-color: #666; color: #888; }
+  .cal-day.practiced.today { border-color: #7ab8f5; }
+  .cal-labels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 4px; }
+  .cal-labels span { font-size: 10px; color: #444; text-align: center; }
+
+  .stats-row { display: flex; gap: 10px; margin-top: 0.75rem; }
+  .stat-pill {
+    background: #1a1a1a; border: 1px solid #222; border-radius: 6px;
+    padding: 6px 10px; font-size: 12px; color: #666; flex: 1; text-align: center;
+  }
+  .stat-pill strong { display: block; font-size: 16px; font-weight: 500; color: #ccc; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<h1>chord drill</h1>
+
+<div class="mode-row" id="modeRow"></div>
+
+<div class="timer-row">
+  <label for="timerSlider">time</label>
+  <input type="range" id="timerSlider" min="10" max="60" step="5" value="30">
+  <span id="timerVal">30s</span>
+</div>
+
+<div class="score-row">
+  <div class="metric"><div class="metric-label">streak</div><div class="metric-val" id="streak">0</div></div>
+  <div class="metric"><div class="metric-label">correct</div><div class="metric-val" id="correct">0</div></div>
+  <div class="metric"><div class="metric-label">avg time</div><div class="metric-val" id="avgtime">–</div></div>
+</div>
+
+<div class="card">
+  <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar" style="width:100%"></div></div>
+  <div class="chord-name" id="chordName">–</div>
+  <div class="note-count" id="noteCount"></div>
+  <div class="answer-grid" id="answerGrid"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next-btn" onclick="nextChord()">next chord →</button>
+  <p class="hint" id="hintText"></p>
+</div>
+
+<div class="card cal-section">
+  <div class="cal-header">
+    <span class="cal-title">practice log</span>
+    <span class="cal-streak" id="calStreakLabel"></span>
+  </div>
+  <div class="cal-labels">
+    <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div class="stats-row">
+    <div class="stat-pill"><strong id="statDays">0</strong>days total</div>
+    <div class="stat-pill"><strong id="statBest">0</strong>best streak</div>
+    <div class="stat-pill"><strong id="statMonth">0</strong>this month</div>
+  </div>
+</div>
+
+<script>
+const ALL_NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const EN = n => ALL_NOTES[((n % 12) + 12) % 12];
+
+const CHORD_TYPES = {
+  'maj':        { i:[0,4,7],           f:'1-3-5' },
+  'min':        { i:[0,3,7],           f:'1-b3-5' },
+  'maj7':       { i:[0,4,7,11],        f:'1-3-5-7' },
+  'min7':       { i:[0,3,7,10],        f:'1-b3-5-b7' },
+  'dom7':       { i:[0,4,7,10],        f:'1-3-5-b7' },
+  'maj9':       { i:[0,4,7,11,14],     f:'1-3-5-7-9' },
+  'min9':       { i:[0,3,7,10,14],     f:'1-b3-5-b7-9' },
+  'dom9':       { i:[0,4,7,10,14],     f:'1-3-5-b7-9' },
+  'maj11':      { i:[0,4,7,11,14,17],  f:'1-3-5-7-9-11' },
+  'min11':      { i:[0,3,7,10,14,17],  f:'1-b3-5-b7-9-11' },
+  'dom11':      { i:[0,4,7,10,14,17],  f:'1-3-5-b7-9-11' },
+  'maj13':      { i:[0,4,7,11,14,21],  f:'1-3-5-7-9-13' },
+  'min13':      { i:[0,3,7,10,14,21],  f:'1-b3-5-b7-9-13' },
+  'dom13':      { i:[0,4,7,10,14,21],  f:'1-3-5-b7-9-13' },
+  'sus2':       { i:[0,2,7],           f:'1-2-5' },
+  'sus4':       { i:[0,5,7],           f:'1-4-5' },
+  'dom7sus4':   { i:[0,5,7,10],        f:'1-4-5-b7' },
+  'dom9sus4':   { i:[0,5,7,10,14],     f:'1-4-5-b7-9' },
+  'dim':        { i:[0,3,6],           f:'1-b3-b5' },
+  'dim7':       { i:[0,3,6,9],         f:'1-b3-b5-bb7' },
+  'min7b5':     { i:[0,3,6,10],        f:'1-b3-b5-b7' },
+  'aug':        { i:[0,4,8],           f:'1-3-#5' },
+  'aug7':       { i:[0,4,8,10],        f:'1-3-#5-b7' },
+  'add9':       { i:[0,4,7,14],        f:'1-3-5-9' },
+  'minadd9':    { i:[0,3,7,14],        f:'1-b3-5-9' },
+  '6':          { i:[0,4,7,9],         f:'1-3-5-6' },
+  'min6':       { i:[0,3,7,9],         f:'1-b3-5-6' },
+  '6/9':        { i:[0,4,7,9,14],      f:'1-3-5-6-9' },
+  'maj7#11':    { i:[0,4,7,11,18],     f:'1-3-5-7-#11' },
+  'dom7b9':     { i:[0,4,7,10,13],     f:'1-3-5-b7-b9' },
+  'dom7#9':     { i:[0,4,7,10,15],     f:'1-3-5-b7-#9' },
+};
+
+const MODES = {
+  'easy':   ['maj','min','maj7','min7'],
+  'medium': ['maj7','min7','dom7','maj9','min9','dom9','sus2','sus4','dim7','min7b5'],
+  'hard':   Object.keys(CHORD_TYPES),
+};
+
+const ROOTS = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+
+let mode = 'easy';
+let currentRoot, currentType, currentNotes;
+let selected = new Set();
+let answered = false;
+let streak = 0, totalCorrect = 0, totalTime = 0, totalAnswered = 0;
+let startTime, timerInterval, timerSecs = 30;
+let audioCtx = null;
+let sessionPracticed = false;
+
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playSquare(freq, durationMs) {
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  const now = ctx.currentTime;
+  const dur = durationMs / 1000;
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.13, now + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  osc.start(now);
+  osc.stop(now + dur);
+}
+
+function playCorrect() { playSquare(880, 70); setTimeout(() => playSquare(1108, 70), 80); }
+function playWrong() { playSquare(220, 110); setTimeout(() => playSquare(196, 140), 90); }
+function playTick() { playSquare(440, 35); }
+
+function noteToFreq(note) {
+  const midi = { C:60,'C#':61,D:62,'D#':63,E:64,F:65,'F#':66,G:67,'G#':68,A:69,'A#':70,B:71 };
+  return 440 * Math.pow(2, ((midi[note] || 60) - 69) / 12);
+}
+
+function playChordPreview(notes) {
+  [...notes].forEach((n, i) => setTimeout(() => playSquare(noteToFreq(n) / 2, 220), i * 65));
+}
+
+document.getElementById('timerSlider').addEventListener('input', function() {
+  timerSecs = parseInt(this.value);
+  document.getElementById('timerVal').textContent = timerSecs + 's';
+});
+
+function buildModeButtons() {
+  const row = document.getElementById('modeRow');
+  row.innerHTML = '';
+  Object.keys(MODES).forEach(m => {
+    const b = document.createElement('button');
+    b.className = 'mode-btn' + (m === mode ? ' active' : '');
+    b.textContent = m;
+    b.onclick = () => { mode = m; buildModeButtons(); nextChord(); };
+    row.appendChild(b);
+  });
+}
+
+function nextChord() {
+  clearInterval(timerInterval);
+  answered = false;
+  selected.clear();
+
+  const types = MODES[mode];
+  currentType = types[Math.floor(Math.random() * types.length)];
+  currentRoot = ROOTS[Math.floor(Math.random() * ROOTS.length)];
+
+  const rIdx = ALL_NOTES.findIndex(n =>
+    n === currentRoot ||
+    (currentRoot === 'Eb' && n === 'D#') ||
+    (currentRoot === 'Ab' && n === 'G#') ||
+    (currentRoot === 'Bb' && n === 'A#'));
+
+  currentNotes = new Set(CHORD_TYPES[currentType].i.map(i => EN(rIdx + i)));
+
+  document.getElementById('chordName').textContent = currentRoot + currentType;
+  document.getElementById('noteCount').textContent = currentNotes.size + ' notes';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('hintText').textContent = '';
+
+  buildGrid();
+  startTimer();
+  startTime = Date.now();
+  setTimeout(() => playChordPreview(currentNotes), 200);
+}
+
+function buildGrid() {
+  const grid = document.getElementById('answerGrid');
+  grid.innerHTML = '';
+  [...ALL_NOTES].sort(() => Math.random() - 0.5).forEach(note => {
+    const b = document.createElement('button');
+    b.className = 'note-btn';
+    b.textContent = note;
+    b.onclick = () => toggleNote(note, b);
+    grid.appendChild(b);
+  });
+}
+
+function toggleNote(note, btn) {
+  if (answered) return;
+  playSquare(noteToFreq(note) / 2, 65);
+  if (selected.has(note)) {
+    selected.delete(note);
+    btn.classList.remove('selected');
+  } else {
+    selected.add(note);
+    btn.classList.add('selected');
+    if (selected.size === currentNotes.size) checkAnswer();
+  }
+}
+
+function checkAnswer() {
+  answered = true;
+  clearInterval(timerInterval);
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  totalAnswered++;
+  totalTime += parseFloat(elapsed);
+
+  const correct = [...currentNotes].every(n => selected.has(n)) && selected.size === currentNotes.size;
+
+  document.querySelectorAll('.note-btn').forEach(b => {
+    b.disabled = true;
+    const n = b.textContent;
+    if (currentNotes.has(n) && selected.has(n)) b.className = 'note-btn correct';
+    else if (selected.has(n)) b.className = 'note-btn wrong';
+    else if (currentNotes.has(n)) b.className = 'note-btn correct';
+    else b.className = 'note-btn';
+  });
+
+  const fb = document.getElementById('feedback');
+  if (correct) {
+    streak++; totalCorrect++;
+    fb.textContent = '✓ correct — ' + elapsed + 's';
+    fb.className = 'feedback ok';
+    playCorrect();
+  } else {
+    streak = 0;
+    fb.textContent = '✗ — ' + [...currentNotes].join(' · ');
+    fb.className = 'feedback ko';
+    playWrong();
+  }
+
+  document.getElementById('hintText').textContent = 'formula: ' + CHORD_TYPES[currentType].f;
+  document.getElementById('streak').textContent = streak;
+  document.getElementById('correct').textContent = totalCorrect;
+  document.getElementById('avgtime').textContent = (totalTime / totalAnswered).toFixed(1) + 's';
+
+  if (!sessionPracticed) {
+    sessionPracticed = true;
+    markTodayPracticed();
+  }
+}
+
+function startTimer() {
+  const bar = document.getElementById('timerBar');
+  const start = Date.now();
+  const limit = timerSecs * 1000;
+  bar.style.width = '100%';
+  let lastTickSec = timerSecs;
+  timerInterval = setInterval(() => {
+    const elapsed = Date.now() - start;
+    const pct = Math.max(0, 100 - (elapsed / limit * 100));
+    bar.style.width = pct + '%';
+    bar.style.background = pct < 30 ? '#a03030' : '#4a8fd4';
+    const secsLeft = Math.ceil((limit - elapsed) / 1000);
+    if (secsLeft <= 5 && secsLeft < lastTickSec && secsLeft > 0 && !answered) {
+      playTick();
+      lastTickSec = secsLeft;
+    }
+    if (elapsed >= limit && !answered) checkAnswer();
+  }, 100);
+}
+
+// ---- localStorage calendar ----
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function loadDays() {
+  try { return JSON.parse(localStorage.getItem('chordDrillDays') || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveDays(days) {
+  localStorage.setItem('chordDrillDays', JSON.stringify(days));
+}
+
+function markTodayPracticed() {
+  const days = loadDays();
+  const t = todayStr();
+  if (!days.includes(t)) { days.push(t); saveDays(days); }
+  renderCalendar();
+}
+
+function calcStreaks(days) {
+  if (!days.length) return { current: 0, best: 0 };
+  const sorted = [...days].sort();
+  let best = 1, cur = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i-1]);
+    const curr = new Date(sorted[i]);
+    const diff = (curr - prev) / 86400000;
+    if (diff === 1) { cur++; best = Math.max(best, cur); }
+    else cur = 1;
+  }
+  const today = todayStr();
+  const yesterday = (() => { const d = new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
+  const lastDay = sorted[sorted.length-1];
+  if (lastDay !== today && lastDay !== yesterday) cur = 0;
+  return { current: cur, best };
+}
+
+function renderCalendar() {
+  const days = loadDays();
+  const daySet = new Set(days);
+  const today = new Date();
+  const todayS = todayStr();
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  // show last 35 days (5 weeks), aligned to Mon
+  const end = new Date(today);
+  const startDay = new Date(today);
+  startDay.setDate(today.getDate() - 34);
+  // pad to Monday
+  const dow = (startDay.getDay() + 6) % 7; // 0=Mon
+  startDay.setDate(startDay.getDate() - dow);
+
+  const cur = new Date(startDay);
+  while (cur <= end || grid.children.length % 7 !== 0) {
+    const dStr = cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0') + '-' + String(cur.getDate()).padStart(2,'0');
+    const div = document.createElement('div');
+    div.className = 'cal-day';
+    if (daySet.has(dStr)) div.classList.add('practiced');
+    if (dStr === todayS) div.classList.add('today');
+    if (cur <= end) div.title = dStr;
+    grid.appendChild(div);
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const { current, best } = calcStreaks(days);
+  document.getElementById('calStreakLabel').textContent = current > 0 ? current + ' day streak 🔥' : 'no streak yet';
+  document.getElementById('statDays').textContent = days.length;
+  document.getElementById('statBest').textContent = best;
+  const thisMonth = days.filter(d => d.startsWith(today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0'))).length;
+  document.getElementById('statMonth').textContent = thisMonth;
+}
+
+buildModeButtons();
+nextChord();
+renderCalendar();
+</script>
+</body>
+</html>
